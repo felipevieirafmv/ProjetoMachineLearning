@@ -4,9 +4,11 @@ import numpy as np
 from joblib import dump
 from sklearn.decomposition import PCA
 from sklearn.linear_model import ElasticNet
+from sklearn.svm import SVR
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import r2_score, mean_absolute_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.ensemble import GradientBoostingRegressor
 
 df = pd.read_csv("interstellar_travel.csv")
 
@@ -21,7 +23,7 @@ df.drop("Customer Satisfaction Score", axis = 1, inplace = True)
 
 df.drop(df[df["Price (Galactic Credits)"] < 0].index, inplace = True)
 
-df = df[1000 : 100000]
+df = df[1000 : 2000]
 
 df["Gender"] = le.fit_transform(df["Gender"])
 df["Occupation"] = le.fit_transform(df["Occupation"])
@@ -35,9 +37,8 @@ df["Loyalty Program Member"] = le.fit_transform(df["Loyalty Program Member"])
 Y = df["Price (Galactic Credits)"]
 X = df.drop("Price (Galactic Credits)", axis = 1)
 
-# print(np.min(Y))
-
-scores = cross_val_score(ElasticNet(fit_intercept = True), X, Y, cv = 8)
+scores = cross_val_score(GradientBoostingRegressor(), X, Y, cv = 8)
+print(scores)
 
 pca = PCA(n_components = 13)
 pca.fit(X)
@@ -48,42 +49,63 @@ X_train, X_test, Y_train, Y_test = train_test_split(
     X, Y, test_size=0.15, random_state=42
 )
 
-model = GridSearchCV(
-    ElasticNet(fit_intercept = True),
-    {
-        'alpha': list(map(lambda x: x, range(1, 10))),
-        'l1_ratio': list(map(lambda x: x / 10, range(1, 10))),
-    },
-    n_jobs=-1,
+est = GridSearchCV(
+    GradientBoostingRegressor(),
+        {
+            "n_estimators": [10000],
+            "learning_rate": [0.1],
+            "max_depth": [2],
+            "random_state": [42],
+            "loss": ["absolute_error"]
+        },
+        n_jobs = -1
 )
 
-model.fit(X_train, Y_train)
-print(model.best_params_)
+est.fit(X_train, Y_train)
+print(est.best_params_)
 
-model = model.best_estimator_
-dump(model, "model.pkl")
+dump(est, "est.pkl")
 
-print(r2_score(Y, model.predict(X)))
-print(mean_absolute_error(Y, model.predict(X)))
+print("Treino")
+print(r2_score(Y_train, est.predict(X_train)))
+print(mean_absolute_error(Y_train, est.predict(X_train)))
+print(mean_squared_error(Y_train, est.predict(X_train)))
 
-Ypred = model.predict(X)
-plt.boxplot(Y)
-# plt.boxplot(Ypred)
+print("Teste")
+print(r2_score(Y_test, est.predict(X_test)))
+print(mean_absolute_error(Y_test, est.predict(X_test)))
+print(mean_squared_error(Y_test, est.predict(X_test)))
+
+tuples = []
+
+Y_pred2 = list(est.predict(X_test))
+
+Y_test2 = list(Y_test)
+
+for aaa in range(len(Y_test2)):
+    if(Y_pred2[aaa] * Y_pred2[aaa] - Y_test2[aaa] * Y_test2[aaa] < 1000):
+        Y_pred2.remove(Y_pred2[aaa])
+        Y_test2.remove(Y_test2[aaa])
+        aaa = aaa - 1
+
+for bbb in range(len(Y_test2)):
+    tuples.append((Y_test2[bbb], Y_pred2[bbb]))
+
+ordened_tuples = sorted(tuples, key = lambda x: x[0])
+
+realY = []
+predY = []
+
+for value in ordened_tuples:
+    realY.append(value[0])
+    predY.append(value[1])
+
+print("Teste2")
+print(r2_score(Y_test2, Y_pred2))
+print(mean_absolute_error(Y_test2, Y_pred2))
+print(mean_squared_error(Y_test2, Y_pred2))
+
+plt.plot(realY)
+plt.plot(predY)
 plt.show()
-# wR = []
-# wP = []
-# Ymm = []
-# Ypmm = []
 
-# for i in range(len(Y)):
-#     wR.append(Y[i])
-#     wP.append(Ypred[i])
-#     if len(wR) > 5:
-#         Ymm.append(sum(wR) / 5)
-#         Ypmm.append(sum(wP) / 5)
-#         wR.pop(0)
-#         wP.pop(0)
-
-# plt.plot(Ymm)
-# plt.plot(Ypmm)
-# plt.show()
