@@ -4,6 +4,7 @@ import numpy as np
 from joblib import dump
 from sklearn.decomposition import PCA
 from sklearn.linear_model import ElasticNet
+from sklearn.ensemble import AdaBoostRegressor
 from sklearn.svm import SVR
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
@@ -49,6 +50,8 @@ X_train, X_test, Y_train, Y_test = train_test_split(
     X, Y, test_size=0.15, random_state=42
 )
 
+print(X_train)
+
 est = GridSearchCV(
     GradientBoostingRegressor(),
         {
@@ -76,17 +79,26 @@ print(r2_score(Y_test, est.predict(X_test)))
 print(mean_absolute_error(Y_test, est.predict(X_test)))
 print(mean_squared_error(Y_test, est.predict(X_test)))
 
+Ypred = est.predict(X)
+plt.boxplot(Y)
+# plt.boxplot(Ypred)
+plt.show()
+
 tuples = []
 
 Y_pred2 = list(est.predict(X_test))
 
 Y_test2 = list(Y_test)
 
-for aaa in range(len(Y_test2)):
-    if(Y_pred2[aaa] * Y_pred2[aaa] - Y_test2[aaa] * Y_test2[aaa] < 1000):
-        Y_pred2.remove(Y_pred2[aaa])
-        Y_test2.remove(Y_test2[aaa])
-        aaa = aaa - 1
+errorIndexes = []
+
+# for aaa in range(len(Y_test2)):
+#     if(abs(Y_pred2[aaa] - Y_test2[aaa]) > 100):
+#         errorIndexes.append(aaa)
+
+# for index in sorted(errorIndexes, reverse=True):
+#     del Y_pred2[index]
+#     del Y_test2[index]
 
 for bbb in range(len(Y_test2)):
     tuples.append((Y_test2[bbb], Y_pred2[bbb]))
