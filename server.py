@@ -31,7 +31,7 @@ def read_form():
 
     df = pd.DataFrame(userArray)
     
-    loaded_model = load(open("Dumps\est.pkl", 'rb'))
+    loaded_model = load(open("est.pkl", 'rb'))
 
     predict = loaded_model.predict(df)
 
