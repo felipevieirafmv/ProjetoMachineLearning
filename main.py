@@ -2,17 +2,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from joblib import dump
-from sklearn.decomposition import PCA
-from sklearn.linear_model import ElasticNet
-from sklearn.ensemble import AdaBoostRegressor
-from sklearn.svm import SVR
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
+import seaborn as sns
 
 def remove_outlier(column):
-    standardDeviationDistance = np.std(df[column]) * 2
+    standardDeviationDistance = np.std(df[column]) * 3
     meanDistance = np.mean(df[column])
     df.drop(df[np.abs(df[column] - meanDistance) > standardDeviationDistance].index, inplace = True)
 
@@ -28,8 +27,6 @@ df.drop("Departure Date", axis = 1, inplace = True)
 df.drop("Customer Satisfaction Score", axis = 1, inplace = True)
 
 df.drop(df[df["Price (Galactic Credits)"] < 0].index, inplace = True)
-
-df = df[0 : 10000]
 
 remove_outlier("Distance to Destination (Light-Years)")
 remove_outlier("Price (Galactic Credits)")
@@ -47,17 +44,21 @@ Y = df["Price (Galactic Credits)"]
 X = df.drop("Price (Galactic Credits)", axis = 1)
 # print(X)
 
+sns.heatmap(df.corr(), annot=True, fmt=".2f", vmin=-1, vmax=1,
+            cmap=sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True))
+
 scores = cross_val_score(GradientBoostingRegressor(), X, Y, cv = 8)
 print(scores)
-
-# pca = PCA(n_components = 13)
-# pca.fit(X)
-
-# X = pca.transform(X)
 
 X_train, X_test, Y_train, Y_test = train_test_split(
     X, Y, test_size=0.5, random_state=42
 )
+
+scaler = StandardScaler()
+scaler.fit(X_train)
+
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test)
 
 est = GridSearchCV(
     GradientBoostingRegressor(),
